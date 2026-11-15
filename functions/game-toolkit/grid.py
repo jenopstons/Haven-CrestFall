@@ -57,7 +57,7 @@ OBJECT_SPEC_KEYS = {
     'barrier': {'category', 'at', 'type', 'requires', 'id', 'remember_as'},
     'switch': {'category', 'at', 'type', 'sets_global', 'id', 'remember_as', 'reusable', 'activation'},
     'hazard': {'category', 'at', 'type', 'id'},
-    'enemy': {'category', 'at', 'type', 'id', 'patrol_range', 'facing', 'anchor'},
+    'enemy': {'category', 'at', 'type', 'id', 'patrol_range', 'facing', 'anchor', 'shoot_interval'},
     'npc': {'category', 'at', 'type', 'lines', 'id', 'anchor'},
     'sign': {'category', 'at', 'type', 'lines', 'id'},
     'exit': {'category', 'at', 'type', 'destination', 'activation', 'requires', 'success_text', 'fail_text', 'id'},
@@ -151,7 +151,7 @@ def _dispatch_object(spec):
     if category == 'enemy':
         return add_enemy(at=at, type=type_, id=spec.get('id'),
                           patrol_range=spec.get('patrol_range'), facing=spec.get('facing', 1),
-                          anchor=spec.get('anchor', 'center'))
+                          anchor=spec.get('anchor', 'center'), shoot_interval=spec.get('shoot_interval'))
     if category == 'npc':
         return add_npc(at=at, type=type_, lines=spec['lines'],
                         id=spec.get('id'), anchor=spec.get('anchor', 'center'))

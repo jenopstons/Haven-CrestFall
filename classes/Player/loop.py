@@ -60,7 +60,7 @@ self.onGround = False
 self.climbableBelow = None
 self.hitbox.x = self.x
 self.hitbox.y = self.y + self.hitboxOffsetY
-solids = get_collision_list(self.hitbox, 'Platform') + get_collision_list(self.hitbox, 'Barrier')
+solids = _solids_touching(self.hitbox)
 best = None
 for solid in solids:
     barrier = getattr(solid, 'barrier', solid if hasattr(solid, 'locked') else None)
@@ -153,7 +153,7 @@ self.x += self.dx
 # get_collision_list misses overlaps of 2 px or less, so walls are found 2 px ahead.
 self.hitbox.x = self.x + (2 if self.dx > 0 else -2 if self.dx < 0 else 0)
 self.hitbox.y = self.y + self.hitboxOffsetY
-solids = get_collision_list(self.hitbox, 'Platform') + get_collision_list(self.hitbox, 'Barrier') + get_collision_list(self.hitbox, 'EdgeWall')
+solids = _solids_touching(self.hitbox, edges=True)
 best = None
 for solid in solids:
     barrier = getattr(solid, 'barrier', solid if hasattr(solid, 'locked') else None)

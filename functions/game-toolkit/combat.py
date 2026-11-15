@@ -152,10 +152,7 @@ def _stagger_enemy(enemy, player):
 def _in_wall(enemy):
     # A solid reaching above the enemy's feet is a wall, as is the room's edge; the floor it stands on is not.
     feet = enemy.hitbox.y - abs(get_height(enemy.hitbox)) / 2
-    for solid in get_collision_list(enemy.hitbox, 'Platform') + get_collision_list(enemy.hitbox, 'Barrier') + get_collision_list(enemy.hitbox, 'EdgeWall'):
-        if not solid._destroyed and solid.y + abs(get_height(solid)) / 2 > feet + 1:
-            return True
-    return False
+    return any(solid.y + abs(get_height(solid)) / 2 > feet + 1 for solid in _live_solids(enemy.hitbox, edges=True))
 
 
 def _knock_back_fits(enemy, direction, distance):
@@ -317,8 +314,10 @@ def _place_hud_rect(rect, x, y, width, height):
     rect.scaleY = height / rect.baseHeight
 
 
-def _place_hud_bar(bar, left, y, width, height, share):
-    # A framed bar: the dark track, and the fill growing from the left by share (0 to 1).
+def _place_hud_bar(bar, left, y, layout, share):
+    # A framed bar the size of layout's width and height: the dark track, and the fill growing from the left by share (0 to 1).
+    width = layout['width']
+    height = layout['height']
     _place_hud_rect(bar.frame, left + width / 2, y, width + 2 * HUD_FRAME, height + 2 * HUD_FRAME)
     _place_hud_rect(bar.track, left + width / 2, y, width, height)
     _place_hud_rect(bar.fill, left + width * share / 2, y, width * share, height)

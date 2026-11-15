@@ -27,6 +27,7 @@ self.dropDy = 0
 self.dropPause = 0
 self.projectile = None
 self.fireTimer = 0
+self.shootInterval = PROJECTILE_CONFIG['enemyFireInterval']
 self.stillPose = None
 self.winFrozen = False
 self._isEnemy = True

@@ -13,22 +13,37 @@ def _ground_ahead(enemy, direction, foot_y, reach=None):
     widened = abs(get_width(enemy.sensor)) - ENEMY_DEFAULTS['sensorSize']
     enemy.sensor.x = enemy.x + direction * (lead + widened / 2)
     enemy.sensor.y = foot_y - abs(get_height(enemy)) / 2 - enemy.senseDown
-    return _live_solid_at(enemy.sensor, 'Platform') or _live_solid_at(enemy.sensor, 'Barrier')
+    return _live_solid_at(enemy.sensor)
 
 
-def _live_solid_at(sensor, kind):
-    # True when the sensor touches a solid of this kind that hasn't just been destroyed, like an opened barrier.
-    hit = get_collision(sensor, kind)
-    if not hit or not hit._destroyed:
-        return bool(hit)
-    return any(not solid._destroyed for solid in get_collision_list(sensor, kind))
+def _solid_kinds(edges):
+    # Platforms and barriers block movement; the room's invisible edge walls do too when edges is True.
+    return ('Platform', 'Barrier', 'EdgeWall') if edges else ('Platform', 'Barrier')
+
+
+def _solids_touching(obj, edges=False):
+    # Every solid obj overlaps, including ones destroyed this frame, like an opened barrier.
+    return [solid for kind in _solid_kinds(edges) for solid in get_collision_list(obj, kind)]
+
+
+def _live_solids(obj, edges=False):
+    return [solid for solid in _solids_touching(obj, edges) if not solid._destroyed]
+
+
+def _live_solid_at(sensor, edges=False):
+    # True when the sensor touches a solid that hasn't just been destroyed.
+    for kind in _solid_kinds(edges):
+        hit = get_collision(sensor, kind)
+        if hit and (not hit._destroyed or any(not solid._destroyed for solid in get_collision_list(sensor, kind))):
+            return True
+    return False
 
 
 def _wall_ahead(enemy, middle_y=None):
     # Probes just ahead of an enemy, at the height of its middle, for a wall or barrier.
     enemy.sensor.x = enemy.x + enemy.dir * (abs(get_width(enemy)) / 2 + enemy.senseAhead)
     enemy.sensor.y = enemy.y if middle_y is None else middle_y
-    return _live_solid_at(enemy.sensor, 'Platform') or _live_solid_at(enemy.sensor, 'Barrier') or _live_solid_at(enemy.sensor, 'EdgeWall')
+    return _live_solid_at(enemy.sensor, edges=True)
 
 
 def _hop_reach(enemy):
@@ -124,11 +139,6 @@ def _handle_enemy_contact(enemy, player, contactFeet):
     return enemy.hitbox.y + get_height(enemy.hitbox) / 2
 
 
-def _enemy_solids(enemy):
-    solids = get_collision_list(enemy.hitbox, 'Platform') + get_collision_list(enemy.hitbox, 'Barrier')
-    return [solid for solid in solids if not solid._destroyed]
-
-
 def _solid_top(solid):
     return solid.y + get_height(solid) / 2
 
@@ -136,7 +146,7 @@ def _solid_top(solid):
 def _floor_below(enemy, previous_bottom, tolerance=None):
     # The solid with the highest top the enemy's hitbox now overlaps that was no more than `tolerance` above its feet.
     reach = ENEMY_GROUND_PROBE if tolerance is None else tolerance
-    floors = [solid for solid in _enemy_solids(enemy) if _solid_top(solid) <= previous_bottom + reach]
+    floors = [solid for solid in _live_solids(enemy.hitbox) if _solid_top(solid) <= previous_bottom + reach]
     return max(floors, key=_solid_top) if floors else None
 
 
@@ -148,7 +158,7 @@ def _still_on(enemy, solid, bottom):
 
 
 def _ceiling_above(enemy, previous_top):
-    bottoms = [solid.y - get_height(solid) / 2 for solid in _enemy_solids(enemy)]
+    bottoms = [solid.y - get_height(solid) / 2 for solid in _live_solids(enemy.hitbox)]
     bottoms = [bottom for bottom in bottoms if bottom >= previous_top - ENEMY_GROUND_PROBE]
     return min(bottoms) if bottoms else None
 
@@ -292,7 +302,7 @@ def _fall_while_staggered(enemy):
 def _settle_on_floor(enemy):
     # A ground enemy placed overlapping a floor stands on top of the one under its middle, not a step beside it.
     _sync_enemy_hitbox(enemy)
-    floors = [solid for solid in _enemy_solids(enemy)
+    floors = [solid for solid in _live_solids(enemy.hitbox)
               if _solid_top(solid) <= enemy.hitbox.y + ENEMY_GROUND_PROBE and abs(solid.x - enemy.hitbox.x) <= abs(get_width(solid)) / 2]
     if floors:
         _stand_on(enemy, max(floors, key=_solid_top))
@@ -315,7 +325,8 @@ def _fell_out_of_room(enemy):
     enemy.x, enemy.y = enemy.lastGround
     if not enemy.dying:
         _defeat_enemy(enemy)
-    elif enemy.dropPending:
+    # A flying enemy is left waiting to land before it drops its pickup; it never will now.
+    if enemy.dropPending:
         enemy.dropPending = False
         _drop_pickup(enemy)
     destroy_object(enemy)
@@ -354,7 +365,7 @@ def _step_enemy(enemy):
         enemy.fireTimer -= 1
         if enemy.fireTimer <= 0 and _player_in_range(enemy):
             _fire_projectile(enemy, enemy.projectile, enemy.dir, False)
-            enemy.fireTimer = PROJECTILE_CONFIG['enemyFireInterval']
+            enemy.fireTimer = enemy.shootInterval
 
 
 def _move_enemy(enemy):
@@ -441,11 +452,16 @@ def _freeze_for_win(obj):
     obj.scaleX = getattr(obj, 'artFacing', 1) * facing
 
 
-def _fire_projectile(shooter, name, direction, from_player, aim=None, size=1, speed=None, art=None, level_y=None):
-    # aim is a unit (dx, dy) to fly along instead of straight ahead; art replaces the projectile's own art;
-    # level_y is a height the shot heads for at 45 degrees before flying straight ahead.
+def _fire_projectile(shooter, name, direction, from_player, shot=None):
+    # shot can hold: 'aim', a unit (dx, dy) to fly along instead of straight ahead; 'size'; 'speed';
+    # 'art', replacing the projectile's own art; and 'levelY', a height the shot heads for at 45 degrees
+    # before flying straight ahead.
+    shot = shot or {}
+    aim = shot.get('aim')
+    size = shot.get('size', 1)
+    level_y = shot.get('levelY')
     p = Projectile()
-    projectileSprite = PROJECTILE_TYPES[name]['sprite'] if art is None else art
+    projectileSprite = shot.get('art') or PROJECTILE_TYPES[name]['sprite']
     _apply_pose(p, _load_pose(projectileSprite))
     p.stillPose = projectileSprite
     p.hitbox = _pose_hitbox(projectileSprite)
@@ -455,7 +471,7 @@ def _fire_projectile(shooter, name, direction, from_player, aim=None, size=1, sp
     p.scaleY = size
     p.x = shooter.hitbox.x + p.vx * abs(get_width(shooter.hitbox)) / 2
     p.y = (shooter.y if from_player else shooter.hitbox.y) + p.vy * abs(get_height(shooter.hitbox)) / 2
-    p.speed = (PROJECTILE_CONFIG['playerSpeed'] if from_player else PROJECTILE_CONFIG['enemySpeed']) if speed is None else speed
+    p.speed = (PROJECTILE_CONFIG['playerSpeed'] if from_player else PROJECTILE_CONFIG['enemySpeed']) if shot.get('speed') is None else shot['speed']
     if level_y is not None and level_y != p.y:
         p.levelY = level_y
         p.vx = direction * 0.7071
@@ -559,7 +575,7 @@ def add_npc(*, at, lines=None, type=None, id=None, anchor='center'):
     return n
 
 
-def add_enemy(*, at, type=None, id=None, patrol_range=None, facing=1, anchor='center'):
+def add_enemy(*, at, type=None, id=None, patrol_range=None, facing=1, anchor='center', shoot_interval=None):
     # type picks a whole enemy type - look, behavior, contactDamage,
     # maxHealth, and speed together, not independent choices.
     x, y = _resolve_at(at)
@@ -571,6 +587,8 @@ def add_enemy(*, at, type=None, id=None, patrol_range=None, facing=1, anchor='ce
         patrol_range = ENEMY_DEFAULTS['patrolRange']
     if isinstance(patrol_range, bool) or not isinstance(patrol_range, (int, float)) or patrol_range < 0:
         raise ValueError('add_enemy needs patrol_range to be a finite nonnegative number.')
+    if shoot_interval is not None and (not _finite_number(shoot_interval) or shoot_interval <= 0):
+        raise ValueError(f'add_enemy needs shoot_interval to be a number of frames above 0, not {shoot_interval!r}.')
     cfg = _require_type(ENEMY_TYPES, type, 'add_enemy')
     behavior = cfg['behavior']
     if behavior not in ENEMY_BEHAVIORS:
@@ -604,7 +622,8 @@ def add_enemy(*, at, type=None, id=None, patrol_range=None, facing=1, anchor='ce
         _validate_global(e.beatenSetsGlobal, 'add_enemy')
         if _global_type(e.beatenSetsGlobal) != 'bool':
             raise ValueError(f"Enemy type {type!r} sets {e.beatenSetsGlobal!r} when beaten, which is type {_global_type(e.beatenSetsGlobal)!r}; it must be a boolean global.")
-    e.fireTimer = PROJECTILE_CONFIG['enemyFireInterval']
+    e.shootInterval = PROJECTILE_CONFIG['enemyFireInterval'] if shoot_interval is None else shoot_interval
+    e.fireTimer = e.shootInterval
     e.stillPose = _resolve_pose(poses, 'idle')
     for key, value in ENEMY_BEHAVIORS.get(behavior, {}).items():
         setattr(e, key, value)
@@ -641,12 +660,15 @@ def add_enemy(*, at, type=None, id=None, patrol_range=None, facing=1, anchor='ce
         if start is not None:
             maxHealth = e.maxHealth
             start(e)
+            if e._destroyed:
+                return e
             _check_enemy_fields(e, 'Start')
             if e.maxHealth == maxHealth:
                 e.maxHealth = e.health
             _face_enemy_art(e)
             _fit_enemy_hitbox(e, cfg.get('hitbox'))
-            _settle_on_floor(e)
+            if not e.flying:
+                _settle_on_floor(e)
             e.spawnX = e.x
             e.spawnY = e.y
             e.lastGround = (e.x, e.y)
@@ -666,9 +688,9 @@ def _face_enemy_art(enemy):
 
 def _check_enemy_fields(enemy, phase):
     # The message starts "In <label>'s <phase> code:", which Studio uses to point at that code.
-    for name in ('x', 'y', 'dir', 'speed', 'health'):
+    for name in ('x', 'y', 'dir', 'speed', 'health', 'maxHealth'):
         value = getattr(enemy, name)
-        if isinstance(value, bool) or not isinstance(value, (int, float)) or value != value or value in (float('inf'), float('-inf')):
+        if not _finite_number(value):
             raise ValueError(f"In {ENEMY_SCRIPTS[enemy.typeName]['label']}'s {phase} code: self.{name} needs to be a number, not {value!r}.")
     if not isinstance(enemy.flying, bool):
         raise ValueError(f"In {ENEMY_SCRIPTS[enemy.typeName]['label']}'s {phase} code: self.flying needs to be True or False, not {enemy.flying!r}.")
@@ -778,15 +800,15 @@ def _shot_aim(enemy):
 
 
 def _check_shot(at_player, size, speed, sprite, level_y):
-    if level_y is not None and (isinstance(level_y, bool) or not isinstance(level_y, (int, float)) or level_y != level_y or level_y in (float('inf'), float('-inf'))):
+    if level_y is not None and not _finite_number(level_y):
         raise ValueError(f'enemy_shoot needs level_y to be a height in the room, such as self.y - 20, not {level_y!r}.')
-    if level_y is not None and at_player:
-        raise ValueError('enemy_shoot can aim at_player or head for level_y, not both.')
     if not isinstance(at_player, bool):
         raise ValueError(f'enemy_shoot needs at_player to be True or False, not {at_player!r}.')
-    if isinstance(size, bool) or not isinstance(size, (int, float)) or not 0 < size <= MAX_SHOT_SIZE:
+    if level_y is not None and at_player:
+        raise ValueError('enemy_shoot can aim at_player or head for level_y, not both.')
+    if not _finite_number(size) or not 0 < size <= MAX_SHOT_SIZE:
         raise ValueError(f'enemy_shoot needs size to be a number above 0 and at most {MAX_SHOT_SIZE}, not {size!r}.')
-    if speed is not None and (isinstance(speed, bool) or not isinstance(speed, (int, float)) or not 0 < speed <= MAX_SHOT_SPEED):
+    if speed is not None and (not _finite_number(speed) or not 0 < speed <= MAX_SHOT_SPEED):
         raise ValueError(f'enemy_shoot needs speed to be a number of pixels per frame above 0 and at most {MAX_SHOT_SPEED}, not {speed!r}.')
     if sprite is not None and (not isinstance(sprite, str) or not sprite):
         raise ValueError(f"enemy_shoot needs sprite to be an art name such as 'fireball.png', not {sprite!r}.")
@@ -803,7 +825,7 @@ def enemy_shoot(enemy, at_player=False, size=1, speed=None, sprite=None, level_y
     _sync_enemy_hitbox(enemy)
     aim = _shot_aim(enemy) if at_player else None
     direction = enemy.dir if aim is None or aim[0] == 0 else (1 if aim[0] > 0 else -1)
-    return _fire_projectile(enemy, enemy.projectile, direction, False, aim, size, None if speed is None else speed * UNIT, sprite, level_y)
+    return _fire_projectile(enemy, enemy.projectile, direction, False, {'aim': aim, 'size': size, 'speed': None if speed is None else speed * UNIT, 'art': sprite, 'levelY': level_y})
 
 
 def wall_ahead(enemy):
@@ -832,7 +854,7 @@ def set_pose(enemy, name):
 
 def jump(enemy, speed):
     _require_enemy(enemy, 'jump')
-    if isinstance(speed, bool) or not isinstance(speed, (int, float)) or speed <= 0:
+    if not _finite_number(speed) or speed <= 0:
         raise ValueError('jump needs a speed above 0, in pixels per frame.')
     if enemy.behavior != 'scripted':
         raise ValueError('jump only works for an enemy with the Scripted behaviour.')

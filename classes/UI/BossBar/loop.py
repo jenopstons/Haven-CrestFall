@@ -19,6 +19,6 @@ panelY = y - barTop - BOSS_PANEL_PADDING + panelHeight / 2
 _place_hud_rect(self.border, x, panelY, panelWidth + 2 * HUD_FRAME, panelHeight + 2 * HUD_FRAME)
 _place_hud_rect(self.panel, x, panelY, panelWidth, panelHeight)
 share = min(max(owner.health / owner.maxHealth, 0), 1) if owner.maxHealth > 0 else 0
-_place_hud_bar(self, x - layout['width'] / 2, y, layout['width'], layout['height'], share)
+_place_hud_bar(self, x - layout['width'] / 2, y, layout, share)
 self.label.x = x
 self.label.y = y + barTop + layout['labelGap'] + nameHeight / 2

@@ -33,7 +33,7 @@ else:
             destroy(self)
             return
 
-for solid in get_collision_list(self, 'Platform') + get_collision_list(self, 'Barrier') + get_collision_list(self, 'EdgeWall'):
-    if not solid._destroyed and _projectile_touches(self, solid):
+for solid in _live_solids(self, edges=True):
+    if _projectile_touches(self, solid):
         destroy(self)
         return

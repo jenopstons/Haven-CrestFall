@@ -138,9 +138,7 @@ def _wall_side(player):
     for side in (-1, 1):
         # get_collision_list misses overlaps of 2 px or less, so look 3 px out.
         player.hitbox.x = player.x + side * 3
-        for solid in get_collision_list(player.hitbox, 'Platform') + get_collision_list(player.hitbox, 'Barrier'):
-            if getattr(solid, '_destroyed', False):
-                continue
+        for solid in _live_solids(player.hitbox):
             beside = (solid.x - player.x) * side > 0
             overlap = (hitbox_height + get_height(solid)) / 2 - abs(solid.y - player.hitbox.y)
             if beside and overlap > 3:

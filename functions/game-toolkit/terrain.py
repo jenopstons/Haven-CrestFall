@@ -37,7 +37,7 @@ def _new_platform(x, y, type=None, launch_speed=None):
 
 def add_platform(*, at, type=None, launch_speed=None):
     x, y = _resolve_at(at)
-    if launch_speed is not None and (isinstance(launch_speed, bool) or not isinstance(launch_speed, (int, float)) or launch_speed != launch_speed or launch_speed in (float('inf'), float('-inf')) or launch_speed <= 0):
+    if launch_speed is not None and (not _finite_number(launch_speed) or launch_speed <= 0):
         raise ValueError('add_platform launch_speed must be a positive finite number.')
     return _new_platform(x, y, type, launch_speed)
 
