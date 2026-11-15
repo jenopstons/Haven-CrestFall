@@ -1,0 +1,13 @@
+self.z = 4
+self.dir = 1
+self.vx = 1
+self.vy = 0
+self.levelY = None
+self.speed = 0
+self.damage = 1
+self.travelled = 0
+self.maxDistance = 0
+self.fromPlayer = True
+self.hitbox = None
+self.stillPose = None
+self.winFrozen = False
