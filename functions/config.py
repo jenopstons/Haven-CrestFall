@@ -119,7 +119,9 @@ SPRITES = {
     "slash.png": {"rows": 1, "cols": 1},
     "theHoodedOne-Sheet.png": {"rows": 1, "cols": 11},
     "theHoodedOneAttack.png": {"rows": 1, "cols": 5},
+    "heartEnemy.png": {"rows": 1, "cols": 2},
     "background.png": {"rows": 1, "cols": 1},
+    "Logo.png": {"rows": 1, "cols": 1},
 }
 SOUNDS = {
     "jump": {"file": "jump.mp3", "volume": 0.05},
@@ -158,12 +160,13 @@ ROOM_MUSIC = {
     "Ending": None,
     "tower": None,
     "towerLore": None,
+    "Controls": None,
 }
 GAME_MUSIC = {
     "file": "DecayingWill.mp3",
     "volume": 0.35,
 }
-SCRIPT_ROOMS = ["A_title_screen", "Ending"]
+SCRIPT_ROOMS = ["A_title_screen", "Ending", "Controls"]
 
 # Game content - choose the types used by the map and room scripts.
 COLLECTIBLE_TYPES = {
@@ -171,7 +174,8 @@ COLLECTIBLE_TYPES = {
     "placeholder_key": {"sprite": {"pose": ("tileset.png", 6), "facing": 1}, "counter": False},
     "collectible_placeholder_tileset_17": {"sprite": {"pose": ("tileset.png", 17), "facing": 1}, "effect": "unlock", "counter": False, "unlocks": "melee"},
     "placeholder_enemy_drop": {"sprite": {"pose": ("default-ui-heart-frames.png", 0), "facing": 1}, "fullSprite": {"pose": ("default-ui-heart-frames.png", 0), "facing": 1}, "emptySprite": {"pose": ("default-ui-heart-frames.png", 1), "facing": 1}, "effect": "heal", "counter": False, "healAmount": 1},
-    "character_5_drop": {"sprite": {"pose": ("icons.png", 0), "facing": 1}, "fullSprite": {"pose": ("icons.png", 0), "facing": 1}, "emptySprite": {"pose": ("default-ui-heart-frames.png", 1), "facing": 1}, "counter": False, "effect": "maxHealth"},
+    "character_5_drop": {"sprite": {"pose": ("icons.png", 0), "facing": 1}, "fullSprite": {"pose": ("icons.png", 0), "facing": 1}, "emptySprite": {"pose": ("default-ui-heart-frames.png", 1), "facing": 1}, "effect": "maxHealth", "counter": False},
+    "character_6_drop": {"sprite": {"pose": ("default-ui-heart-frames.png", 0), "facing": 1}, "fullSprite": {"pose": ("default-ui-heart-frames.png", 0), "facing": 1}, "emptySprite": {"pose": ("default-ui-heart-frames.png", 1), "facing": 1}, "effect": "heal", "counter": False, "healAmount": 1},
 }
 HAZARD_TYPES = {
     "placeholder_spikes": {"sprite": {"pose": ("tileset.png", 4), "facing": 1}, "damage": 1},
@@ -197,8 +201,9 @@ ENEMY_TYPES = {
     "character_3": {"poses": {"idle": {"pose": {"sheet": "placeholder-characters.png", "start": 5, "end": 6, "fps": 3}, "facing": 1}}, "speed": 0.4444444444444444, "behavior": "flyer", "maxHealth": 3, "projectile": "character_3_projectile", "contactDamage": 1},
     "character_2": {"poses": {"idle": {"pose": ("tileset.png", 11), "facing": 1}, "dropping": {"pose": ("tileset.png", 19), "facing": 1}}, "speed": 0.4444444444444444, "behavior": "dropper", "maxHealth": 1, "contactDamage": 1},
     "placeholder_enemy": {"poses": {"idle": {"pose": ("placeholder-characters.png", 0), "facing": 1}, "run": {"pose": {"sheet": "placeholder-characters.png", "start": 0, "end": 1, "fps": 3}, "facing": 1}, "jumpUp": {"pose": ("placeholder-characters.png", 0), "facing": 1}, "jumpDown": {"pose": ("placeholder-characters.png", 1), "facing": 1}}, "displayName": "Placeholder enemy", "behavior": "jumper", "drop": "placeholder_enemy_drop", "speed": 0.4444444444444444, "maxHealth": 2, "dropChance": 40, "contactDamage": 1},
-    "character_5": {"poses": {"idle": {"pose": {"sheet": "theHoodedOne-Sheet.png", "start": 0, "end": 9, "fps": 8}, "facing": 1}, "attack": {"pose": {"sheet": "theHoodedOneAttack.png", "start": 1, "end": 4, "fps": 8}, "facing": 1}}, "boss": True, "speed": 0.4444444444444444, "behavior": "scripted", "maxHealth": 10, "projectile": "character_5_projectile", "contactDamage": 1, "drop": "character_5_drop", "dropSetsGlobal": "nextLevelable", "name": "The Hooded One"},
+    "character_5": {"poses": {"idle": {"pose": {"sheet": "theHoodedOne-Sheet.png", "start": 0, "end": 9, "fps": 8}, "facing": 1}, "attack": {"pose": {"sheet": "theHoodedOneAttack.png", "start": 1, "end": 4, "fps": 8}, "facing": 1}}, "drop": "character_5_drop", "speed": 0.4444444444444444, "behavior": "scripted", "maxHealth": 10, "projectile": "character_5_projectile", "contactDamage": 1, "dropSetsGlobal": "nextLevelable", "boss": True, "beatenSetsGlobal": "BossDead", "name": "The Hooded One"},
     "character_4": {"poses": {"idle": {"pose": ("placeholder-characters.png", 4), "facing": 1}}, "speed": 0.4444444444444444, "behavior": "stationary", "maxHealth": 3, "projectile": "character_4_projectile", "contactDamage": 1},
+    "character_6": {"poses": {"run": {"pose": {"sheet": "heartEnemy.png", "start": 0, "end": 1, "fps": 2}, "facing": 1}, "idle": {"pose": {"sheet": "heartEnemy.png", "start": 0, "end": 1, "fps": 2}, "facing": 1}}, "drop": "character_6_drop", "speed": 0.8888888888888888, "behavior": "patrol", "maxHealth": 2, "projectile": "character_6_projectile", "noticeRange": 160, "contactDamage": 1, "bulletDistance": 80},
 }
 NPC_TYPES = {
     "placeholder_npc": {"poses": {"idle": {"pose": ("placeholder-characters.png", 2), "facing": 1}}, "displayName": "Placeholder NPC", "behavior": "stationary"},
@@ -208,6 +213,7 @@ PROJECTILE_TYPES = {
     "character_1_projectile": {"sprite": {"pose": ("enemy-bullet.png", 0), "facing": 1}},
     "character_4_projectile": {"sprite": {"pose": ("enemy-bullet.png", 0), "facing": 1}},
     "character_5_projectile": {"sprite": {"pose": ("enemy-bullet.png", 0), "facing": 1}},
+    "character_6_projectile": {"sprite": {"pose": ("enemy-bullet.png", 0), "facing": 1}},
 }
 ENEMY_DEFAULTS = {
     "patrolRange": 33.33333333333333,
@@ -325,11 +331,12 @@ GLOBALS = {
     "towerSWITCH3": {"type": "bool", "default": False},
     "towerSWITCH4": {"type": "bool", "default": False},
     "Puzzle2Switch": {"type": "bool", "default": False},
+    "nextLevelable": {"type": "bool", "default": False},
     "SectionOneUnlock": {"type": "bool", "default": False},
     "switchDOESnothing": {"type": "bool", "default": False},
     "Puzzle2SwitchUnlock": {"type": "bool", "default": False},
     "interactSwitch_DROP": {"type": "bool", "default": False},
     "SwordSwitchActivated": {"type": "bool", "default": False},
     "thisANDtowerSWITCH2doesNOTHING": {"type": "bool", "default": False},
-    "nextLevelable": {"type": "bool", "default": False},
+    "BossDead": {"type": "bool", "default": False},
 }
